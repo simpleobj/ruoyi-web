@@ -28,6 +28,7 @@ type MessageItem = BubbleProps & {
   reasoning_content?: string;
 };
 
+const copyIcon = ref("CopyDocument");
 const route = useRoute();
 const chatStore = useChatStore();
 const modelStore = useModelStore();
@@ -359,7 +360,11 @@ function copyToClipboard(text: string) {
   navigator.clipboard
     .writeText(text)
     .then(() => {
-      ElMessage.success("内容已复制到剪贴板");
+      // ElMessage.success("内容已复制到剪贴板");
+      copyIcon.value = "Check"; // Change icon to checkmark
+      setTimeout(() => {
+        copyIcon.value = "CopyDocument"; // Reset icon after delay
+      }, 2000);
     })
     .catch((err) => {
       console.error("复制失败:", err);
@@ -456,14 +461,19 @@ watch(
             default-theme-mode="dark"
           />
           <!-- user 内容 纯文本 -->
-          <div v-if="item.content && item.role === 'user'" class="user-content">
-            {{ item.content }}
-            <el-button
-              class="copy-btn"
-              icon="CopyDocument"
-              size="small"
-              @click="copyToClipboard(item.content)"
-            />
+          <div v-if="item.content && item.role === 'user'" class="user-bubble">
+            <div class="user-content">
+              {{ item.content }}
+            </div>
+            <!-- Copy Button Container -->
+            <div class="copy-button-container">
+              <el-button
+                class="copy-btn"
+                :icon="copyIcon"
+                size="small"
+                @click="copyToClipboard(item.content)"
+              />
+            </div>
           </div>
         </template>
       </BubbleList>
@@ -609,25 +619,39 @@ watch(
 </template>
 
 <style scoped lang="scss">
-.user-content {
-  display: flex;
-  // align-items: center;
-  gap: 8px;
+.user-bubble {
+  position: relative;
+  display: inline-block;
 
-  .copy-btn {
-    border: 1px solid;
-    flex-shrink: 0;
-    padding: 4px;
-    font-size: 14px;
-    color: #909399;
-    background-color: transparent;
-    border: none;
-    cursor: pointer;
-    transition: color 0.2s ease;
+  .user-content {
+    max-width: 100%;
+    word-wrap: break-word;
+  }
 
-    &:hover {
-      color: #409eff;
+  .copy-button-container {
+    position: absolute;
+    bottom: -40px;
+    right: -10px;
+    opacity: 0;
+    transform: translateY(10px);
+    transition: all 0.3s ease;
+    pointer-events: none;
+
+    .copy-btn {
+      width: 24px;
+      height: 24px;
+      padding: 0;
+      font-size: 14px;
+      background-color: #ffffff;
+      cursor: pointer;
+      pointer-events: auto;
+      float: right;
     }
+  }
+
+  &:hover .copy-button-container {
+    opacity: 1;
+    transform: translateY(0);
   }
 }
 .chat-with-id-container {
