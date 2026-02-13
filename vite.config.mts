@@ -24,5 +24,11 @@ export default defineConfig((cnf) => {
         },
       },
     },
+    // 浏览器缓存问题
+    server: {
+      headers: {
+        'Cache-Control': 'no-store',
+      },
+    },
   };
 });
