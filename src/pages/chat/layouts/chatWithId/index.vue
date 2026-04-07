@@ -337,6 +337,9 @@ async function startSSE(chatContent: string) {
       reSumeRunner.value.feedbackContent = chatContent;
     }
 
+    // 标记是否收到第一个有效数据 chunk（用于清除 loading 状态）
+    let hasReceivedFirstContent = false;
+
     for await (const chunk of stream({
       model: modelStore.currentModelInfo.modelName ?? '',
       content: lastUserMessage?.content ?? '',
@@ -351,7 +354,19 @@ async function startSSE(chatContent: string) {
     })) {
       // 处理数据块 - chunk.result 可能是字符串或对象
       // 返回 true 表示流结束
-      if (handleDataChunk(chunk.result)) {
+      const isStreamEnd = handleDataChunk(chunk.result);
+
+      // 在收到第一个有效数据后清除 loading 状态（跳过连接状态事件）
+      if (!hasReceivedFirstContent && chunk.result !== ':connected' && chunk.result !== ':disconnected' && !isStreamEnd) {
+        const lastMessage = bubbleItems.value[bubbleItems.value.length - 1];
+        if (lastMessage) {
+          lastMessage.loading = false;
+          bubbleItems.value = [...bubbleItems.value];
+        }
+        hasReceivedFirstContent = true;
+      }
+
+      if (isStreamEnd) {
         break; // 提前结束流处理
       }
       // 等待 Vue 更新 DOM，实现真正的流式渲染
@@ -360,6 +375,12 @@ async function startSSE(chatContent: string) {
   }
   catch (err) {
     handleError(err);
+    // 出错时也要清除 loading 状态
+    if (bubbleItems.value.length) {
+      const lastMessage = bubbleItems.value[bubbleItems.value.length - 1];
+      lastMessage.loading = false;
+      bubbleItems.value = [...bubbleItems.value];
+    }
   }
   finally {
     // 停止打字器状态
@@ -374,6 +395,7 @@ async function startSSE(chatContent: string) {
       }
       // 重置isThinking标志
       isThinking = false;
+      bubbleItems.value = [...bubbleItems.value];
     }
   }
 }
